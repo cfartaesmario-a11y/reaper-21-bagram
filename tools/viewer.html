@@ -1,0 +1,43 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Visor de modelos</title>
+<style>html,body{margin:0;height:100%;background:#6f7f8f;overflow:hidden;font:12px monospace;color:#fff}#i{position:fixed;left:6px;top:6px;white-space:pre;text-shadow:0 0 3px #000}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js","three/addons/":"../vendor/three/examples/jsm/"}}</script>
+</head><body><div id="i"></div>
+<script type="module">
+// Herramienta de desarrollo: viewer.html?m=mq9&view=iso|top|side|front&hide=3,4&solo=5
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x7f8fa0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x554433, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 2.5); sun.position.set(3, 6, 4); scene.add(sun);
+const cam = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.01, 5000);
+const oc = new OrbitControls(cam, r.domElement);
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+loader.load(`../assets/models/${q.get('m')}.glb`, (g) => {
+  const o = g.scene; scene.add(o); o.updateMatrixWorld(true);
+  const meshes = []; o.traverse((c) => c.isMesh && meshes.push(c));
+  const hide = (q.get('hide') || '').split(',').filter(Boolean).map(Number);
+  const solo = (q.get('solo') || '').split(',').filter(Boolean).map(Number);
+  meshes.forEach((m, i) => { if (hide.includes(i) || (solo.length && !solo.includes(i))) m.visible = false; });
+  const b = new THREE.Box3();
+  meshes.forEach((m) => m.visible && b.expandByObject(m));
+  const s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
+  const R = s.length() * 0.5;
+  const ax = new THREE.AxesHelper(R * 1.2); scene.add(ax);
+  const dirs = { iso: [1, 0.6, 1], top: [0, 1, 0.001], side: [1, 0.05, 0], front: [0, 0.05, 1], back: [0, 0.1, -1], under: [0.6, -0.7, 0.8], iso2: [-1, 0.5, -0.8] };
+  const d = new THREE.Vector3(...(dirs[q.get('view') || 'iso'])).normalize();
+  cam.position.copy(c).addScaledVector(d, R * (parseFloat(q.get('d')) || 2.0)); cam.near = R / 100; cam.far = R * 100; cam.updateProjectionMatrix();
+  oc.target.copy(c); oc.update();
+  const f = (v) => v.toArray().map((x) => x.toFixed(2)).join(', ');
+  document.getElementById('i').textContent = `${q.get('m')}  size ${f(s)}  center ${f(c)}  min ${f(b.min)}\nX rojo  Y verde  Z azul   meshes ${meshes.length} anims ${g.animations.map((a) => a.name)}\n` +
+    (q.get('list') ? meshes.map((m, i) => { const bb = new THREE.Box3().setFromObject(m); return `${i} ${m.name} [${m.material.name}] c(${f(bb.getCenter(new THREE.Vector3()))}) s(${f(bb.getSize(new THREE.Vector3()))})`; }).join('\n') : '');
+  window.__ready = true;
+});
+(function loop() { requestAnimationFrame(loop); r.render(scene, cam); })();
+</script></body></html>

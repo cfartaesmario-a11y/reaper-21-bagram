@@ -1,0 +1,10 @@
+{
+ "lat": 34.9461,
+ "lon": 69.265,
+ "sizeMeters": 64158.478654172184,
+ "heightPx": 1024,
+ "imagePx": 4096,
+ "minElev": 1053.0,
+ "maxElev": 4592.0,
+ "heightScale": 0.1
+}
