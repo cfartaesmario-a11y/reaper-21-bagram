@@ -50,6 +50,8 @@ export class Sensor {
     this.az = 0; this.el = -25 * DEG;       // acimut (rumbo verdadero) y elevación de la línea de mira
     this.zoom = 0; this.mode = 0;
     this.lock = null;                        // punto del terreno fijado
+    this.lockObj = null;                     // actor seguido (vehículo o persona)
+    this.aim = null;                         // punto que ilumina el designador láser
     this.target = null; this.range = 0;
     this.dir = new THREE.Vector3();
     this.composer = new EffectComposer(renderer);
@@ -68,22 +70,26 @@ export class Sensor {
   zoomBy(d) { this.zoom = clamp(this.zoom + d, 0, FOVS.length - 1); this.camera.fov = this.fov; this.camera.updateProjectionMatrix(); }
   nextMode() { this.mode = (this.mode + 1) % 3; }
   slew(dx, dy) {
-    if (this.lock) this.lock = null;
+    if (this.lock) { this.lock = null; this.lockObj = null; }
     const k = this.fov * DEG / 900;
     this.az += dx * k; this.el = clamp(this.el - dy * k, -89.5 * DEG, 12 * DEG);
   }
-  toggleLock() {
-    if (this.lock) { this.lock = null; return; }
-    if (this.target) this.lock = this.target.clone();
+  /** Fija el punto bajo la retícula; si hay un actor cerca, lo sigue aunque se mueva. */
+  toggleLock(world) {
+    if (this.lock) { this.lock = null; this.lockObj = null; return; }
+    if (!this.target) return;
+    this.lock = this.target.clone();
+    this.lockObj = world ? world.pick(this.target, Math.max(10, this.range * this.fov * 0.0006)) : null;
   }
   /** Orienta la torreta hacia delante y abajo (posición de crucero). */
-  cage() { this.lock = null; this.az = this.drone.heading; this.el = -20 * DEG; }
+  cage() { this.lock = null; this.lockObj = null; this.az = this.drone.heading; this.el = -20 * DEG; }
 
   update() {
     const d = this.drone;
     d.root.updateMatrixWorld(true);
     const p = this._p.copy(d.sensorPos); d.root.localToWorld(p);
     this.camera.position.copy(p);
+    if (this.lockObj) { if (this.lockObj.alive) this.lock.set(this.lockObj.pos.x, this.lockObj.pos.y + 0.9, this.lockObj.pos.z); else this.lockObj = null; }
     if (this.lock) {
       this.dir.subVectors(this.lock, p).normalize();
       this.az = Math.atan2(this.dir.x, -this.dir.z);
@@ -98,9 +104,11 @@ export class Sensor {
     const hit = this.terrain.raycast(p, this.dir);
     this.target = hit ? hit.point : null;
     this.range = hit ? hit.distance : 0;
+    if (this.lockObj) { this.aim = this.lock; this.range = this.lock.distanceTo(p); } else this.aim = this.target;
   }
 
-  render(time) {
+  render(time, fx) {
+    fx?.setScale(this.camera, this.renderer.domElement.height);
     const ir = this.mode > 0;
     this.env.setThermal(ir);
     this.fx.uniforms.mode.value = this.mode;

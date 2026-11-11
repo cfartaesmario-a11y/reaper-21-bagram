@@ -184,6 +184,7 @@ export function buildAirbase({ assets, terrain }) {
   wallRun(WALL.x1, GATE_Z + 9, WALL.x1, WALL.z1);
 
   const posts = [];        // puestos de soldados
+  const colliders = [];    // rectángulos de colisión para el personaje a pie {x, z, hw, hd}
   const towers = [];
   const addTower = (x, z, ry) => { towers.push({ x, z, ry }); };
   for (let z = WALL.z0 + 6; z <= WALL.z1 - 5; z += (WALL.z1 - WALL.z0 - 12) / 10) { addTower(WALL.x0 + 5, z, Math.PI / 2); addTower(WALL.x1 - 5, z, -Math.PI / 2); }
@@ -215,14 +216,17 @@ export function buildAirbase({ assets, terrain }) {
     add('whitePaint', new THREE.SphereGeometry(3.2, 20, 14).translate(x + 12, 9.2, z + 16));       // radomo
     cyl('wall', 2.2, 2.4, 2.9, x + 12, 6.5, z + 16, 12);
     posts.push({ x: x - 8, z: z + 6, ry: -Math.PI / 2 });
+    colliders.push({ x, z, hw: 3.75, hd: 3.75 }, { x: x + 4, z: z + 14, hw: 13, hd: 8 });
   }
 
   // ====================================================================== HANGARES Y ZONA DE OPERACIONES
   const hangars = [-650, -470, -290].map((z) => ({ x: 566, z, ry: Math.PI / 2 }));
   assets.instanced('hangar', hangars, base);
+  for (const h of hangars) colliders.push({ x: h.x, z: h.z, hw: 32, hd: 22 });
   for (const h of hangars) rect('apron', 520, 600, h.z - 26, h.z + 26, Y_PAVE);
   // nave de mantenimiento y parque de bomberos
   const shed = (x, z, w, d, h, mat = 'metal') => {
+    colliders.push({ x, z, hw: w / 2, hd: d / 2 });
     box(mat, w, h, d, x, 0, z);
     box('metalDark', w + 1, 0.35, d + 1, x, h, z);
     for (let i = 0; i < Math.floor(w / 9); i++) box('dark', 5.5, h * 0.72, 0.15, x - w / 2 + 6 + i * 9, 0, z - d / 2 - 0.05);
@@ -263,6 +267,11 @@ export function buildAirbase({ assets, terrain }) {
   const containers = [];
   const GX = 468, GZ = 705;
   containers.push({ x: GX, z: GZ, ry: 0 }, { x: GX, z: GZ + 5, ry: 0 }, { x: GX + 8, z: GZ + 22, ry: Math.PI / 2 });
+  colliders.push({ x: GX, z: GZ + 2.5, hw: 3.1, hd: 4.0 }, { x: GX + 8, z: GZ + 22, hw: 1.3, hd: 3.1 });
+  // acceso a la estación: escalón, marquesina y baliza
+  box('steel', 1.6, 0.25, 2.2, GX - 3.9, 0, GZ + 2.5); box('metalDark', 2.2, 0.12, 3.2, GX - 4.0, 2.75, GZ + 2.5);
+  for (const o of [-1.4, 1.4]) cyl('steel', 0.05, 0.05, 2.75, GX - 5.0, 0, GZ + 2.5 + o, 6);
+  box('papi', 0.5, 0.18, 0.1, GX - 3.08, 2.3, GZ + 2.5, Math.PI / 2);
   const dish = (x, z, r, ry) => {
     cyl('steel', 0.18, 0.28, r * 1.25, x, 0, z, 8);
     const d = new THREE.SphereGeometry(r * 1.6, 20, 8, 0, Math.PI * 2, 0, 0.68);
@@ -298,6 +307,7 @@ export function buildAirbase({ assets, terrain }) {
     const x = 706 + b * 148 + i * 13.5, z = -790 + r * 58;
     if (z > -460) continue;
     box(i % 4 === 1 ? 'ply' : 'wall', 7, 2.9, 22, x, 0, z);
+    colliders.push({ x, z, hw: 3.5, hd: 11 });
     box(r % 2 ? 'metal' : 'metalDark', 7.7, 0.22, 22.8, x, 2.9, z);
     box('dark', 1, 2.1, 0.1, x, 0, z - 11.05);
     if (R() < 0.5) box('steel', 1.1, 0.9, 0.9, x + 2.2, 0, z + 11.6);
@@ -405,6 +415,10 @@ export function buildAirbase({ assets, terrain }) {
   for (const c of c130s) { rect('yellow', c.x - 30, c.x + 60, c.z - 0.12, c.z + 0.12, Y_LINE); }
   posts.push({ x: 318, z: -612, ry: 2 }, { x: 322, z: -609, ry: -1 }, { x: 300, z: -1140, ry: 0.4 }, { x: 352, z: -1040, ry: 2.8 }, { x: 345, z: -410, ry: 1 });
 
+  posts.push({ x: 722, z: 612, ry: 0.4 }, { x: 760, z: 640, ry: 2.1 }, { x: 790, z: 668, ry: -1 }, { x: 836, z: 612, ry: 3 }, { x: 712, z: 930, ry: 1.2 }, { x: 716, z: 934, ry: -2 },
+    { x: 540, z: -640, ry: -1.6 }, { x: 538, z: -470, ry: -1.4 }, { x: 536, z: -292, ry: -1.7 }, { x: 544, z: -60, ry: -1.5 }, { x: 548, z: 108, ry: -1.5 },
+    { x: 705, z: -420, ry: 1 }, { x: 760, z: -300, ry: -2 }, { x: 900, z: -250, ry: 0.5 }, { x: 728, z: -72, ry: -1.5 }, { x: 872, z: 56, ry: 1.5 }, { x: 1010, z: 240, ry: 3 },
+    { x: 292, z: -1196, ry: 1 }, { x: 374, z: -1096, ry: -1 }, { x: 386, z: 700, ry: -1.5 }, { x: 380, z: 838, ry: 1.6 }, { x: 512, z: 760, ry: 2.4 }, { x: 498, z: 728, ry: 0.3 });
   for (const [k, list] of Object.entries(parked)) assets.instanced(k, list, base);
   assets.instanced('hesco', hescoUnits, base);
 
@@ -450,10 +464,12 @@ export function buildAirbase({ assets, terrain }) {
   const patrols = [
     [[536, -700], [536, 400]], [[690, -445], [1105, -445]], [[232, 575], [432, 575]], [[650, 560], [650, 1000]],
     [[1030, 590], [1030, 990]], [[WALL.x1 - 30, GATE_Z - 60], [WALL.x1 - 30, GATE_Z + 60]], [[228, -1250], [428, -1250]], [[700, -210], [900, -210]],
+    [[450, 620], [450, 960]], [[620, 520], [620, 1040]], [[232, -740], [232, 430]], [[690, 420], [1100, 420]], [[660, -860], [1120, -860]], [[1120, -400], [1120, 300]],
   ];
 
   return {
-    group: base, routes, patrols, posts, radar, runwayHeading: CFG.heading,
+    group: base, routes, patrols, posts, radar, runwayHeading: CFG.heading, colliders,
+    gcs: { x: GX - 5.2, z: GZ + 2.5 }, playerSpawn: { x: 530, z: 742 },
     spawn: { x: 0, z: L / 2 - 14 },                       // cabecera 03
     shelters: shelterZ.map((z) => ({ x: SHELTER_X + 1, z })),
     localToWorld: (x, y, z) => base.localToWorld(new THREE.Vector3(x, y, z)),

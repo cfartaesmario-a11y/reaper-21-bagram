@@ -57,6 +57,8 @@ export async function loadAssets(renderer, onProgress) {
   }
   // la textura de detalle del terreno se muestrea con coordenadas de mundo propias
   textures.gravel.map.repeat.set(1, 1);
+  textures.grass = tex('sparse_grass_diff', true, 1);
+  textures.rock = tex('rocky_terrain_02_diff', true, 1);
 
   const models = {};
   const heatMaterials = [];

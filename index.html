@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REAPER 21 · Operador RPA · Bagram</title>
+<title>REAPER 21 · Operador RPA</title>
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }
@@ -11,113 +11,43 @@
 </head>
 <body>
 <canvas id="view"></canvas>
+<canvas id="hud"></canvas>
+<div id="gcs-frame" class="hidden"></div>
 
-<!-- ======= Instrumentación de vuelo ======= -->
-<div id="hud" class="hidden">
-  <div class="hint">H · AYUDA</div>
-  <div class="panel tl">
-    <div class="big" id="h-call">REAPER 21</div>
-    <div>MQ-9A · <span id="h-view">EXTERIOR</span></div>
-    <div id="h-clock">00:00:00Z</div>
-  </div>
-  <canvas id="h-tape" width="520" height="56"></canvas>
-  <div class="panel ml">
-    <div class="lbl">IAS</div><div class="num"><span id="h-ias">0</span><small>KT</small></div>
-    <div class="lbl">MOTOR</div>
-    <div class="bar"><i id="h-thr"></i></div>
-    <div class="sub" id="h-thrv">0 %</div>
-  </div>
-  <div class="panel mr">
-    <div class="lbl">ALT MSL</div><div class="num"><span id="h-alt">0</span><small>FT</small></div>
-    <div class="sub">AGL <b id="h-agl">0</b> FT</div>
-    <div class="sub">V/S <b id="h-vs">0</b> FPM</div>
-  </div>
-  <canvas id="h-adi" width="170" height="170"></canvas>
-  <div class="panel bl">
-    <div><span class="tag" id="h-gear">TREN ABAJO</span></div>
-    <div><span class="tag" id="h-brake">FRENO</span></div>
-    <div><span class="tag" id="h-ap">AP OFF</span></div>
-  </div>
-  <div class="panel br">
-    <div id="h-lat">N00°00'00.0"</div>
-    <div id="h-lon">E000°00'00.0"</div>
-    <div>RUMBO <b id="h-hdg">000</b>° · GS <b id="h-gs">0</b> KT</div>
-    <div class="dim">OAIX BAGRAM · PISTA 03/21</div>
-  </div>
-  <div id="h-warn"></div>
+<!-- letterbox y rótulos de cinemática -->
+<div id="bars"><i></i><i></i></div>
+<div id="caption" class="hidden"><h2></h2><p></p></div>
+<div id="skip" class="hidden">ESPACIO · saltar</div>
 
-  <!-- ======= Superposición del sensor ======= -->
-  <div id="sensor" class="hidden">
-    <div class="ret"><i class="h1"></i><i class="h2"></i><i class="v1"></i><i class="v2"></i><b></b></div>
-    <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>
-    <div class="s-tl">
-      <div id="s-mode">EO DÍA</div>
-      <div>FOV <b id="s-fov">28.0°</b> · <b id="s-zoom">x1</b></div>
-      <div id="s-trk">SEGUIMIENTO: MANUAL</div>
-    </div>
-    <div class="s-tr">
-      <div>AZ <b id="s-az">000</b>° · EL <b id="s-el">-00</b>°</div>
-      <div>LRD <span class="dim">SEGURO</span></div>
-    </div>
-    <div class="s-bottom">
-      <div>OBJ <b id="s-lat">--</b> <b id="s-lon">--</b></div>
-      <div>ELEV <b id="s-elev">--</b> FT · DIST <b id="s-rng">--</b> KM</div>
-    </div>
-  </div>
+<!-- objetivo, radio y avisos de interacción -->
+<div id="objective" class="hidden"><span class="dia"></span><div><small></small><b></b></div></div>
+<div id="radio" class="hidden"><b></b><span></span></div>
+<div id="prompt" class="hidden"><kbd>F</kbd><span></span></div>
+<div id="toast" class="hidden"></div>
 
-  <div id="help" class="hidden">
-    <h3>CONTROLES</h3>
-    <table>
-      <tr><td>W / S</td><td>Morro abajo / arriba</td></tr>
-      <tr><td>A / D</td><td>Alabeo (en tierra: dirección)</td></tr>
-      <tr><td>Q / E</td><td>Timón</td></tr>
-      <tr><td>Mayús / Z</td><td>Más / menos motor</td></tr>
-      <tr><td>B</td><td>Freno de estacionamiento</td></tr>
-      <tr><td>G</td><td>Tren de aterrizaje</td></tr>
-      <tr><td>P</td><td>Piloto automático: OFF → RUMBO → ÓRBITA</td></tr>
-      <tr><td>1 · 2 · 3</td><td>Vista exterior · sensor · cámara libre</td></tr>
-      <tr><td>Ratón</td><td>Mover cámara / torreta (clic para capturar)</td></tr>
-      <tr><td>Rueda</td><td>Zoom</td></tr>
-      <tr><td>Espacio</td><td>Sensor: fijar punto en tierra</td></tr>
-      <tr><td>T</td><td>Sensor: EO / IR blanco / IR negro</td></tr>
-      <tr><td>X</td><td>Sensor: centrar torreta</td></tr>
-      <tr><td>R</td><td>Volver a cabecera de pista</td></tr>
-      <tr><td>H</td><td>Mostrar / ocultar esta ayuda</td></tr>
-    </table>
+<!-- tarea entrante / informe / pausa -->
+<div id="panel" class="hidden">
+  <div class="sheet">
+    <div class="tag"></div>
+    <h2></h2>
+    <div class="body"></div>
+    <div class="actions"></div>
   </div>
 </div>
 
-<!-- ======= Pantalla de inicio ======= -->
-<div id="start">
-  <div class="card">
-    <div class="kicker">ESCUADRÓN EXPEDICIONARIO DE RECONOCIMIENTO · SISTEMAS RPA</div>
-    <h1>REAPER 21</h1>
-    <h2>Aeródromo de Bagram · Parwan, Afganistán · 34°56′N 069°15′E</h2>
-    <p>Eres el operador de un MQ-9A desplegado en Bagram. El aparato está alineado en la cabecera de la pista 03 con el motor en marcha.
-       Suelta el freno, da motor y rota a 75 nudos.</p>
-    <div class="keys"><table>
-        <tr><td>W / S</td><td>Morro abajo / arriba</td></tr>
-        <tr><td>A / D</td><td>Alabeo (en tierra: dirección)</td></tr>
-        <tr><td>Q / E</td><td>Timón</td></tr>
-        <tr><td>Mayús / Z</td><td>Más / menos motor</td></tr>
-        <tr><td>B</td><td>Freno de estacionamiento</td></tr>
-        <tr><td>G</td><td>Tren de aterrizaje</td></tr>
-        <tr><td>P</td><td>Piloto automático: OFF → RUMBO → ÓRBITA</td></tr>
-        <tr><td>1 · 2 · 3</td><td>Vista exterior · sensor · cámara libre</td></tr>
-        <tr><td>Ratón</td><td>Mover cámara / torreta (clic para capturar)</td></tr>
-        <tr><td>Rueda</td><td>Zoom</td></tr>
-        <tr><td>Espacio</td><td>Sensor: fijar punto en tierra</td></tr>
-        <tr><td>T</td><td>Sensor: EO / IR blanco / IR negro</td></tr>
-        <tr><td>X</td><td>Sensor: centrar torreta</td></tr>
-        <tr><td>R</td><td>Volver a cabecera de pista</td></tr>
-        <tr><td>H</td><td>Mostrar / ocultar esta ayuda</td></tr>
-      </table></div>
-    <div class="load"><i id="l-bar"></i></div>
-    <div id="l-txt">Cargando terreno…</div>
-    <button id="go" disabled>ASUMIR CONTROL</button>
-    <div class="fine">Terreno y satélite reales (Copernicus Sentinel-2 · Mapzen Terrain). Modelos CC-BY: ver CREDITS.md</div>
+<!-- menú principal -->
+<div id="menu">
+  <div class="shade"></div>
+  <div class="col">
+    <div class="brand"><span>REAPER</span> 21<small>OPERADOR RPA · BAGRAM</small></div>
+    <nav id="nav"></nav>
+    <div class="foot">ALFA 0.2 · Terreno y satélite reales · Modelos CC-BY (ver créditos)</div>
   </div>
+  <div class="info" id="info"></div>
+  <div class="loading" id="loading"><div class="bar"><i id="l-bar"></i></div><span id="l-txt">Cargando…</span></div>
 </div>
+
+<div id="fade"></div>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

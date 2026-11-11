@@ -1,6 +1,7 @@
 # Créditos y licencias
 
 El código de este repositorio (carpeta `src/`, `css/`, `index.html`, `tools/`) se publica bajo licencia MIT.
+Todo el sonido se sintetiza en tiempo real (Web Audio); no hay archivos de audio de terceros.
 Los recursos de terceros conservan su propia licencia; se listan a continuación con las modificaciones aplicadas.
 
 ## Modelos 3D (Sketchfab, licencia CC BY 4.0)
@@ -43,7 +44,7 @@ Licencia CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 
 ## Texturas
 
-- Poly Haven (CC0): `asphalt_02`, `sandy_gravel_02`, `corrugated_iron_02`, `clay_plaster`, `concrete_wall_008`. https://polyhaven.com
+- Poly Haven (CC0): `asphalt_02`, `sandy_gravel_02`, `corrugated_iron_02`, `clay_plaster`, `concrete_wall_008`, `sparse_grass`, `rocky_terrain_02`. https://polyhaven.com
 
 ## Motor
 

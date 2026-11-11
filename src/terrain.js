@@ -74,40 +74,65 @@ export async function createTerrain(renderer, textures) {
   const mat = new THREE.MeshStandardMaterial({ map: sat, roughness: 1, metalness: 0 });
   const uni = {
     detailMap: { value: textures.gravel.map },
+    grassMap: { value: textures.grass },
+    rockMap: { value: textures.rock },
     baseRect: { value: new THREE.Vector4(fcx, 0, (W.x1 - W.x0) / 2 + 180, (W.z1 - W.z0) / 2 + 180) },
     baseRot: { value: new THREE.Vector4(CFG.baseX, CFG.baseZ, ca, sa) },
   };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(position, 1.0)).xyz;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vTN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(position, 1.0)).xyz; vTN = normal;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-        uniform sampler2D detailMap; uniform vec4 baseRect; uniform vec4 baseRot; varying vec3 vWPos;
-        const vec3 DM = vec3(0.324, 0.174, 0.086);   // color medio (lineal) de la textura de detalle`)
+        uniform sampler2D detailMap; uniform sampler2D grassMap; uniform sampler2D rockMap;
+        uniform vec4 baseRect; uniform vec4 baseRot; varying vec3 vWPos; varying vec3 vTN;
+        const vec3 DM = vec3(0.324, 0.174, 0.086);   // color medio (lineal) de la textura de detalle
+        float lum(vec3 c) { return dot(c, vec3(0.3, 0.55, 0.15)); }
+        float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`)
       .replace('#include <map_fragment>', `#include <map_fragment>
         {
           float dd = distance(vWPos, cameraPosition);
-          vec3 d1 = texture2D(detailMap, vWPos.xz * 0.11).rgb / DM;
-          vec3 d2 = texture2D(detailMap, vWPos.xz * 0.0137 + 0.37).rgb / DM;
-          vec3 d3 = texture2D(detailMap, vWPos.xz * 0.0017 + 0.11).rgb / DM;
-          d1 = mix(vec3(dot(d1, vec3(0.333))), d1, 0.5); d2 = mix(vec3(dot(d2, vec3(0.333))), d2, 0.5); d3 = vec3(dot(d3, vec3(0.333)));
-          float f1 = 1.0 - smoothstep(40.0, 700.0, dd);
-          float f2 = 1.0 - smoothstep(600.0, 6000.0, dd);
-          // realce del satélite (la imagen Sentinel-2 es plana) y detalle procedural cercano
-          vec3 satc = diffuseColor.rgb;
-          satc = mix(vec3(dot(satc, vec3(0.3, 0.5, 0.2))), satc, 1.18) * 0.92;
-          vec3 det = mix(vec3(1.0), d1, f1 * 0.7) * mix(vec3(1.0), d2, f2 * 0.5) * mix(vec3(1.0), d3, 0.2);
+          vec2 xz = vWPos.xz;
+          float f1 = 1.0 - smoothstep(30.0, 600.0, dd);
+          float f2 = 1.0 - smoothstep(500.0, 7000.0, dd);
+          vec3 d1 = texture2D(detailMap, xz * 0.11).rgb / DM;
+          vec3 d2 = texture2D(detailMap, xz * 0.0137 + 0.37).rgb / DM;
+          float d3 = lum(texture2D(detailMap, xz * 0.0017 + 0.11).rgb / DM);
+          d1 = mix(vec3(lum(d1)), d1, 0.5); d2 = mix(vec3(lum(d2)), d2, 0.5);
+          vec3 sat = diffuseColor.rgb;
+          // clasificación a partir del propio satélite: vegetación y pendiente
+          float veg = smoothstep(0.004, 0.035, sat.g - 0.5 * (sat.r + sat.b));
+          float rock = smoothstep(0.84, 0.64, normalize(vTN).y);
+          sat = mix(vec3(lum(sat)), sat, 1.2) * 0.94;
+          // suelo seco
+          vec3 soil = sat * mix(vec3(1.0), d1, f1 * 0.7) * mix(vec3(1.0), d2, f2 * 0.5) * mix(1.0, d3, 0.2);
+          // cultivos y huertos: hierba real de cerca, surcos y variación entre parcelas
+          float g1 = lum(texture2D(grassMap, xz * 0.16).rgb) / 0.052;
+          float g2 = lum(texture2D(grassMap, xz * 0.021 + 0.5).rgb) / 0.052;
+          vec2 cell = floor(xz / 140.0 + vec2(d3 * 0.6));
+          float ang = hash2(cell) * 3.1416;
+          float rows = sin(dot(xz, vec2(cos(ang), sin(ang))) * 2.1);
+          float parcel = 0.93 + 0.14 * hash2(cell + 7.3);
+          vec3 green = mix(sat, sat * vec3(0.8, 1.08, 0.7), 0.6) * parcel;
+          green *= mix(1.0, g1, f1 * 0.75) * mix(1.0, g2, f2 * 0.3) * (1.0 + rows * 0.1 * f2);
+          green = mix(green, vec3(0.085, 0.135, 0.04) * g1 * (0.9 + 0.2 * g2) * parcel, f1 * 0.5);
+          // roca en las laderas
+          float r1 = lum(texture2D(rockMap, xz * 0.05).rgb) / 0.07;
+          float r2 = lum(texture2D(rockMap, xz * 0.006 + 0.3).rgb) / 0.07;
+          vec3 stone = sat * mix(1.0, r1, f1 * 0.85) * mix(1.0, r2, f2 * 0.75) * 0.95;
+          vec3 col = mix(soil, green, veg);
+          col = mix(col, stone, rock * (1.0 - veg * 0.6));
           // suelo de grava del recinto militar
-          vec2 dw = vWPos.xz - baseRot.xy;
+          vec2 dw = xz - baseRot.xy;
           vec2 l = vec2(dw.x * baseRot.z + dw.y * baseRot.w, -dw.x * baseRot.w + dw.y * baseRot.z);
-          float nb = (d3.r - 1.0) * 220.0 + (d2.r - 1.0) * 40.0;
+          float nb = (d3 - 1.0) * 220.0 + (d2.r - 1.0) * 40.0;
           float wb = (1.0 - smoothstep(baseRect.z - 90.0, baseRect.z + 160.0, abs(l.x - baseRect.x) + nb))
                    * (1.0 - smoothstep(baseRect.w - 90.0, baseRect.w + 160.0, abs(l.y) + nb));
-          vec3 gravel = vec3(0.50, 0.415, 0.29) * mix(vec3(1.0), d1, mix(0.3, 0.85, f1)) * mix(vec3(1.0), d2, 0.55) * mix(vec3(1.0), d3, 0.5);
-          gravel = mix(gravel, satc * det * 1.05, 0.25);
-          diffuseColor.rgb = mix(satc * det, gravel, wb);
+          vec3 gravel = vec3(0.50, 0.415, 0.29) * mix(vec3(1.0), d1, mix(0.3, 0.85, f1)) * mix(vec3(1.0), d2, 0.55) * mix(1.0, d3, 0.5);
+          gravel = mix(gravel, soil * 1.05, 0.25);
+          diffuseColor.rgb = mix(col, gravel, wb);
         }`);
   };
 

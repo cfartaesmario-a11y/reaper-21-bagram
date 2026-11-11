@@ -55,7 +55,7 @@ export function createScenery({ terrain, assets }) {
   const treeMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true });
   const tchunks = new Map();
   let count = 0; tries = 0;
-  while (count < 16000 && tries++ < 260000) {
+  while (count < 26000 && tries++ < 420000) {
     const ang = R() * Math.PI * 2, rad = 2200 + Math.sqrt(R()) * 11500;
     const x = CFG.baseX + Math.cos(ang) * rad, z = CFG.baseZ + Math.sin(ang) * rad;
     if (Math.abs(x) > terrain.half - 300 || Math.abs(z) > terrain.half - 300) continue;
@@ -83,5 +83,5 @@ export function createScenery({ terrain, assets }) {
     im.computeBoundingSphere(); im.computeBoundingBox();
     group.add(im);
   }
-  return { group, compounds: placed.length, trees: count };
+  return { group, compounds: placed.length, trees: count, sites: placed };
 }

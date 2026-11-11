@@ -17,8 +17,8 @@ export const CFG = {
   // Recinto de la base en coordenadas locales (x = lateral, z = eje de pista; -z es el sentido de la pista 03).
   wall: { x0: -420, x1: 1180, z0: -2150, z1: 2150 },
 
-  sunElevation: 34 * DEG,
-  sunAzimuth: 118 * DEG,      // desde el norte, sentido horario (mañana)
+  sunElevation: 27 * DEG,
+  sunAzimuth: 112 * DEG,      // desde el norte, sentido horario (mañana)
 
   worldLimit: 30500,          // radio útil del área de operaciones (m)
 };
